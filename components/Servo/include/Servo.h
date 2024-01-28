@@ -17,6 +17,20 @@
 #define SERVO_TIMEBASE_RESOLUTION_HZ 1000000  // 1MHz, 1us per tick
 #define SERVO_TIMEBASE_PERIOD        20000    // 20000 ticks, 20ms
 
-void servo_init();
-void servo_run(void);
+typedef struct {
+    mcpwm_timer_handle_t timer;
+    mcpwm_oper_handle_t oper;
+    mcpwm_cmpr_handle_t comparator;
+    mcpwm_gen_handle_t generator;
+    char* name;
+    int gpio_num;
+    int group_id;
+    int initial_angle;
+    int step; 
+} servo_t;
+
+void servo_init_config(servo_t *servo, char* name, int gpio_num, int group_id, int initial_angle,int step);
+
+void servo_init(servo_t *servo);
+void servo_run(servo_t *servo);
 #endif

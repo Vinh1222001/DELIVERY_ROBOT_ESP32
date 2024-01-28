@@ -1,5 +1,5 @@
 #include "ShiftRegister.h"
 
-void printHello(){
-    printf("Hello!\n");
+void printHello(char* text){
+    printf("%s\n", text);
 }
