@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2010-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: CC0-1.0
- */
-
 #include <stdio.h>
 #include <inttypes.h>
 #include "sdkconfig.h"
@@ -12,78 +6,116 @@
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 
+#include "esp_log.h"
+
 #include "esp_attr.h"
-#include "driver/mcpwm.h"
-#include "soc/mcpwm_reg.h"
-#include "soc/mcpwm_struct.h"
+
+// #include "driver/mcpwm.h"
+// #include "soc/mcpwm_reg.h"
+// #include "soc/mcpwm_struct.h"
 
 #include "ShiftRegister.h"
-// #include "Servo.h"
+#include "Servo.h"
+#include "MovingController.h"
 
-#define SERVO_MIN_PULSEWIDTH 500 //Minimum pulse width in microsecond
-#define SERVO_MAX_PULSEWIDTH 2500 //Maximum pulse width in microsecond
-#define SERVO_MAX_DEGREE 180 //Maximum angle in degree upto which servo can rotate
+#define CLOCK_PIN GPIO_NUM_27
+#define SLATCH_PIN GPIO_NUM_26
+#define SERIAL_DATA_PIN GPIO_NUM_25
 
-static void mcpwm_example_gpio_initialize()
-{
-    printf("initializing mcpwm servo control gpio......\n");
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, 18);    //Set GPIO 18 as PWM0A, to which servo is connected
+servo_t servo18={
+    .unit = MCPWM_UNIT_0,
+    .signal = MCPWM0A,
+    .timer = MCPWM_TIMER_0,
+    .operator = MCPWM_OPR_A,
+    .gpio =18 ,
+    .angle = 0,
+};
+
+shift_register_t my_register = {
+    .clock_pin = CLOCK_PIN,
+    .slatch_pin = SLATCH_PIN,
+    .serial_data_pin = SERIAL_DATA_PIN,
+    .bit_order = MSBFIRST,
+};
+
+void run_servo(void* arg){
+    servo_init(servo18);
+    uint32_t count=0;
+    int step=2;
+    while (1)
+    {
+        if(count< 0 || count >SERVO_MAX_DEGREE){
+            step*=-1;
+        }
+        count+=step;
+        servo_set_angle(&servo18, count);
+        ESP_LOGI("SERVO", "Current Angle: %d", servo_get_angle(&servo18));
+        vTaskDelay(10); 
+    }
+    
 }
 
-/**
- * @brief Use this function to calcute pulse width for per degree rotation
- *
- * @param  degree_of_rotation the angle in degree to which servo has to rotate
- *
- * @return
- *     - calculated pulse width
- */
-static uint32_t servo_per_degree_init(uint32_t degree_of_rotation)
-{
-    uint32_t cal_pulsewidth = 0;
-    cal_pulsewidth = (SERVO_MIN_PULSEWIDTH + (((SERVO_MAX_PULSEWIDTH - SERVO_MIN_PULSEWIDTH) * (degree_of_rotation)) / (SERVO_MAX_DEGREE)));
-    return cal_pulsewidth;
-}
+void run_shift_register(void* arg){
+    shift_regiter_initialize(my_register);
+    while (1)
+    {
+        for (int val = 0; val < 255; val++)
+        {
+            gpio_set_level(SLATCH_PIN,0);
 
-/**
- * @brief Configure MCPWM module
- */
-void mcpwm_example_servo_control(void *arg)
-{
-    uint32_t angle, count=0;
-    int step=3;
-    //1. mcpwm gpio initialization
-    mcpwm_example_gpio_initialize();
+            if(val%2){
 
-    //2. initial mcpwm configuration
-    printf("Configuring Initial Parameters of mcpwm......\n");
-    mcpwm_config_t pwm_config;
-    pwm_config.frequency = 50;    //frequency = 50Hz, i.e. for every servo motor time period should be 20ms
-    pwm_config.cmpr_a = 0;    //duty cycle of PWMxA = 0
-    pwm_config.cmpr_b = 0;    //duty cycle of PWMxb = 0
-    pwm_config.counter_mode = MCPWM_UP_COUNTER;
-    pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
-    mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config);    //Configure PWM0A & PWM0B with above settings
-    while (1) {
-        // for (count = 0; count < SERVO_MAX_DEGREE; count+=3) {
-            if(count< 0 || count >SERVO_MAX_DEGREE){
-                step*=-1;
+                shift_out(my_register, 0);
+            }else{
+                shift_out(my_register,2);
             }
-            count+=step;
-            printf("Angle of rotation: %ld\n", count);
-            angle = servo_per_degree_init(count);
-            printf("pulse width: %ld\n", angle);
-            mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, angle);
-            vTaskDelay(10);     //Add delay, since it takes time for servo to rotate, generally 100ms/60degree rotation at 5V
-        // }
+
+            gpio_set_level(SLATCH_PIN,1);
+            ESP_LOGI("Value","%d",val);
+            vTaskDelay(5000/portTICK_PERIOD_MS);
+        }
         
     }
 }
 
 void app_main()
 {
-    printf("Hello World!\n");
-    xTaskCreate(mcpwm_example_servo_control, "mcpwm_example_servo_control", 4096, NULL, 5, NULL);
+    // printf("Hello World!\n");
+    // xTaskCreatePinnedToCore(mcpwm_example_servo_control, "mcpwm_example_servo_control", 4096, NULL, 5, NULL,0);
+    // xTaskCreatePinnedToCore(run_servo,"Servo_runner", 4096, NULL, 5, NULL, 0);
+    gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
+    gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT);
+
+    int state=1;
+    while(1){
+        ESP_LOGI("MOTOR'S STATE", "%d", state);
+        switch (state)
+        {
+            case 1:
+                gpio_set_level(GPIO_NUM_18, 0);
+                gpio_set_level(GPIO_NUM_19, 0);
+                break;
+            case 2:
+                gpio_set_level(GPIO_NUM_18, 1);
+                gpio_set_level(GPIO_NUM_19, 0);
+                break;
+            case 3:
+                gpio_set_level(GPIO_NUM_18, 0);
+                gpio_set_level(GPIO_NUM_19, 1);
+                break;
+            case 4:
+                gpio_set_level(GPIO_NUM_18, 1);
+                gpio_set_level(GPIO_NUM_19, 1);
+                break;
+
+        }
+        if(++state>4){
+            state = 1;
+        }
+        vTaskDelay(5000/portTICK_PERIOD_MS);
+    }
+
+    // xTaskCreatePinnedToCore(run_shift_register,"Shift_Register_Run", 2048, NULL,5, NULL, 0);
 
 }
 
