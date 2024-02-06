@@ -17,9 +17,9 @@ void moving_motor_pins_init(gpio_num_t left_A, gpio_num_t left_B, gpio_num_t rig
 
 esp_err_t moving_set_status(moving_status_t moving_status_val){
 
-    if(pre_moving_status = moving_status) return ESP_OK;
+    pre_moving_status = moving_status;
 
-    if(moving_status = moving_status_val)return ESP_OK;
+    moving_status = moving_status_val; 
 
     return ESP_OK;
 }

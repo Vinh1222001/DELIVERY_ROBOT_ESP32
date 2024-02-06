@@ -19,7 +19,7 @@ extern "C" {
 */
 
 typedef enum{
-    INIT;
+    INIT,
     STOP,
     MOVING_FORWARD,
     MOVING_BACKWARD,
