@@ -17,17 +17,26 @@
 #include "ShiftRegister.h"
 #include "Servo.h"
 #include "MovingController.h"
+#include "WifiController.h"
 
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "nvs_flash.h"
 
+#include "esp_http_client.h"
 #include "freertos/event_groups.h"
+
+#include "esp_tls.h"
+#include "esp_crt_bundle.h"
+
+
+extern const uint8_t certificate_pem_start[] asm("_binary_certificate_pem_start");
+extern const uint8_t certificate_pem_end[]   asm("_binary_certificate_pem_end");
 
 #define DEFAULT_SCAN_LIST_SIZE 20
 
-#define WIFI_PASSWORD                       "11223366"
-#define WIFI_SSID                           "Ba Mieng An"
+#define WIFI_PASSWORD                       "0931551717"
+#define WIFI_SSID                           "Xuan Huong"
 #define MAXIMUM_CONNECTING_RETRY            5
 
 #define ESP_WIFI_SAE_MODE                   WPA3_SAE_PWE_BOTH
@@ -257,6 +266,42 @@ void wifi_init_sta(void){
 
 }
 
+esp_err_t client_event_get_handler(esp_http_client_event_handle_t evt)
+{
+    switch (evt->event_id)
+    {
+    case HTTP_EVENT_ON_DATA:
+        printf("HTTP_EVENT_ON_DATA: %.*s\n", evt->data_len, (char *)evt->data);
+        break;
+
+    default:
+        break;
+    }
+    return ESP_OK;
+}
+
+static void rest_get()
+{
+    esp_http_client_config_t config = {
+        .url = "http://wgwgsekezynjlhhlqumg.supabase.co/rest/v1/media?select=*",
+        .method = HTTP_METHOD_GET,
+        // .cert_pem = (const char *)certificate_pem_start,
+        .event_handler = client_event_get_handler,
+        .buffer_size = 2048,
+        .buffer_size_tx = 2048,
+        .auth_type = HTTP_AUTH_TYPE_BASIC,
+        .transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+    };
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+
+    esp_http_client_set_header(client, "apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indnd2dzZWtlenluamxoaGxxdW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTkwOTk4MTMsImV4cCI6MjAxNDY3NTgxM30.LYalkXTe0dBA8avqI46GPtDmBO9IIBIQMTrWmBCStiA");
+    esp_http_client_set_header(client, "Authorization","Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indnd2dzZWtlenluamxoaGxxdW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTkwOTk4MTMsImV4cCI6MjAxNDY3NTgxM30.LYalkXTe0dBA8avqI46GPtDmBO9IIBIQMTrWmBCStiA");
+    esp_http_client_perform(client);
+    esp_http_client_cleanup(client);
+}
+
 void app_main()
 {
     // printf("Hello World!\n");
@@ -275,5 +320,9 @@ void app_main()
 
     wifi_init_sta();
     // wifi_scan();
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    printf("WIFI was initiated ...........\n\n");
+
+    rest_get();
 }
 
