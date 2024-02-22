@@ -1,0 +1,45 @@
+menu "Server Configuration"
+
+    config SERVER_NAME
+        string "Server name"
+        default  "Supabase"
+        help
+            "The server's name. This is used in the title of the web interface."
+
+    config SERVER_URL
+        string "Server url"
+        default  "jhaukacezyclslzmlkwv.supabase.co"
+        help
+            "The server's url."
+
+    config SERVER_BASE_PATH
+        string "Server base path"
+        default "/rest/v1/"
+        help
+            "Server base path api."
+
+    config SERVER_API_KEY
+        string "Server API key"
+        default "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoYXVrYWNlenljbHNsem1sa3d2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTM4OTc2MTMsImV4cCI6MjAwOTQ3MzYxM30.IYKgXwX7dx0a0EAphSM0u1W69nBvhV4dPuOli1ni1G4"
+        help
+            "Header's info. This is used for server authorization."
+    
+    config SERVER_AUTHORIZATION
+        string "Server Authorization"
+        default "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoYXVrYWNlenljbHNsem1sa3d2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTM4OTc2MTMsImV4cCI6MjAwOTQ3MzYxM30.IYKgXwX7dx0a0EAphSM0u1W69nBvhV4dPuOli1ni1G4"
+        help
+            "Header's info. This is used for server authorization."
+    
+    config TRANSMIT_BUFFER_SIZE 
+        int "Maximum transmit buffer size"
+        default 1024
+        help
+            "Set the maximum transmit buffer size."
+    
+    config RECIEVE_BUFFER_SIZE 
+        int "Maximum recieve buffer size"
+        default 1024
+        help
+            "Set the maximum recieve buffer size."
+
+endmenu
